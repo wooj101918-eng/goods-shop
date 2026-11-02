@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>결제 결과</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+  <h1 id="title">결제 확인 중...</h1>
+  <p id="detail"></p>
+  <a href="index.html">상품 목록으로</a>
+
+  <script>
+    async function confirmPayment() {
+      const params = new URLSearchParams(location.search)
+      const { data, error } = await db.functions.invoke('confirm-payment', {
+        body: { paymentKey: params.get('paymentKey'), orderId: params.get('orderId') },
+      })
+
+      if (error) {
+        const body = await error.context?.json().catch(() => null)
+        document.getElementById('title').textContent = '결제에 실패했습니다'
+        document.getElementById('detail').textContent = body?.message ?? error.message
+        return
+      }
+
+      document.getElementById('title').textContent = '결제가 완료되었습니다'
+      document.getElementById('detail').textContent =
+        `${data.order.product_name} · ${data.order.amount.toLocaleString()}원`
+    }
+
+    confirmPayment()
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>결제 실패</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>결제가 완료되지 않았습니다</h1>
+  <p id="detail"></p>
+  <a href="index.html">상품 목록으로</a>
+
+  <script>
+    document.getElementById('detail').textContent = new URLSearchParams(location.search).get('message')
+  </script>
+</body>
+</html>
