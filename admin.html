@@ -3,31 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>결제 내역</title>
+  <title>관리자</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
+  <script src="common.js"></script>
 </head>
 <body>
-  <h1>결제 내역</h1>
-  <a href="index.html">상품 목록으로</a>
-  <p id="message"></p>
-
-  <div class="table-wrap" id="table-wrap" hidden>
-    <table>
-      <thead>
-        <tr><th>결제 시각</th><th>구매자</th><th>상품</th><th>금액</th></tr>
-      </thead>
-      <tbody id="orders"></tbody>
-    </table>
-  </div>
+  <header id="site-header"></header>
+  <main>
+    <h1>모든 결제 내역</h1>
+    <p id="message" class="muted"></p>
+    <div id="orders" class="order-list"></div>
+  </main>
 
   <script>
     async function showOrders() {
-      const message = document.getElementById('message')
+      const session = await requireLogin()
+      if (!session) return
 
-      const { data: admin } = await db.from('admins').select('user_id').maybeSingle()
-      if (!admin) {
+      const message = document.getElementById('message')
+      if (!await isAdmin(session)) {
         message.textContent = '관리자만 볼 수 있습니다.'
         return
       }
@@ -41,21 +37,9 @@
         return
       }
 
-      document.getElementById('table-wrap').hidden = false
+      if (orders.length === 0) message.textContent = '결제 내역이 없습니다.'
       for (const order of orders) {
-        const row = document.createElement('tr')
-        const cells = [
-          new Date(order.paid_at).toLocaleString(),
-          order.user_email,
-          order.product_name,
-          `${order.amount.toLocaleString()}원`,
-        ]
-        for (const text of cells) {
-          const cell = document.createElement('td')
-          cell.textContent = text
-          row.append(cell)
-        }
-        document.getElementById('orders').append(row)
+        document.getElementById('orders').append(orderCard(order, true))
       }
     }
 

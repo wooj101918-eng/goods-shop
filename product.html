@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>상품 상세</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+  <script src="https://js.tosspayments.com/v2/standard"></script>
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+</head>
+<body>
+  <header id="site-header"></header>
+  <main>
+    <p id="message" class="message" role="alert"></p>
+
+    <div id="product" class="product-detail" hidden>
+      <img id="photo" class="product-photo" alt="">
+      <div>
+        <h1 id="name"></h1>
+        <p id="price" class="detail-price"></p>
+        <p id="description" class="muted"></p>
+        <button id="buy" class="button">구매하기</button>
+
+        <div id="checkout" hidden>
+          <div id="payment-method"></div>
+          <div id="agreement"></div>
+          <div class="checkout-actions">
+            <button id="pay" class="button">결제하기</button>
+            <a class="button secondary" href="index.html">취소</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const message = document.getElementById('message')
+    const productId = new URLSearchParams(location.search).get('id')
+
+    async function showProduct() {
+      const { data: product } = await db.from('products').select().eq('id', productId).maybeSingle()
+      if (!product) {
+        message.textContent = '상품을 찾을 수 없습니다.'
+        return
+      }
+
+      document.getElementById('photo').src = product.image_url
+      document.getElementById('photo').alt = product.name
+      document.getElementById('name').textContent = product.name
+      document.getElementById('price').textContent = won(product.price)
+      document.getElementById('description').textContent = product.description
+      document.getElementById('product').hidden = false
+      document.getElementById('buy').onclick = () => buy(product)
+    }
+
+    async function buy(product) {
+      const session = await requireLogin()
+      if (!session) return
+
+      const buyButton = document.getElementById('buy')
+      buyButton.disabled = true
+      message.textContent = ''
+
+      const { data: order, error } = await db.rpc('create_order', { p_product_id: product.id }).single()
+      if (error) {
+        message.textContent = '주문을 만들지 못했습니다.'
+        buyButton.disabled = false
+        return
+      }
+
+      buyButton.hidden = true
+      document.getElementById('checkout').hidden = false
+
+      const widgets = TossPayments(TOSS_CLIENT_KEY).widgets({ customerKey: session.user.id })
+      await widgets.setAmount({ currency: 'KRW', value: order.amount })
+      await Promise.all([
+        widgets.renderPaymentMethods({ selector: '#payment-method', variantKey: 'DEFAULT' }),
+        widgets.renderAgreement({ selector: '#agreement', variantKey: 'AGREEMENT' }),
+      ])
+
+      document.getElementById('pay').onclick = async () => {
+        message.textContent = ''
+        try {
+          await widgets.requestPayment({
+            orderId: order.id,
+            orderName: order.product_name,
+            customerEmail: session.user.email,
+            successUrl: new URL('success.html', location.href).href,
+            failUrl: new URL('fail.html', location.href).href,
+          })
+        } catch (error) {
+          message.textContent = error.message
+        }
+      }
+    }
+
+    showProduct()
+  </script>
+</body>
+</html>

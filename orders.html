@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 결제 내역</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+</head>
+<body>
+  <header id="site-header"></header>
+  <main>
+    <h1>내 결제 내역</h1>
+    <p id="message" class="muted"></p>
+    <div id="orders" class="order-list"></div>
+  </main>
+
+  <script>
+    async function showOrders() {
+      const session = await requireLogin()
+      if (!session) return
+
+      const message = document.getElementById('message')
+      const { data: orders, error } = await db.from('orders')
+        .select()
+        .eq('user_id', session.user.id)
+        .eq('status', 'paid')
+        .order('paid_at', { ascending: false })
+      if (error) {
+        message.textContent = '결제 내역을 불러오지 못했습니다.'
+        return
+      }
+
+      if (orders.length === 0) message.textContent = '결제 내역이 없습니다.'
+      for (const order of orders) {
+        document.getElementById('orders').append(orderCard(order, false))
+      }
+    }
+
+    showOrders()
+  </script>
+</body>
+</html>

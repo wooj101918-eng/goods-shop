@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="narrow">
+    <h1>로그인 / 회원가입</h1>
+    <form id="auth-form">
+      <label>이메일
+        <input id="email" type="email" autocomplete="email" required>
+      </label>
+      <label>비밀번호 (6자 이상)
+        <input id="password" type="password" autocomplete="current-password" minlength="6" required>
+      </label>
+      <p id="message" class="message" role="alert"></p>
+      <button class="button" type="submit">로그인</button>
+      <button class="button secondary" type="button" id="signup">회원가입</button>
+    </form>
+  </main>
+
+  <script>
+    const form = document.getElementById('auth-form')
+    const message = document.getElementById('message')
+
+    function credentials() {
+      return {
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+      }
+    }
+
+    // 다른 사이트로 이동하지 않도록 우리 페이지 주소만 허용합니다.
+    async function goNext(session) {
+      if (await isAdmin(session)) {
+        location.href = 'admin.html'
+        return
+      }
+      const next = new URLSearchParams(location.search).get('next') ?? ''
+      location.href = /^[a-z]+\.html(\?id=\d+)?$/.test(next) ? next : 'index.html'
+    }
+
+    form.onsubmit = async (event) => {
+      event.preventDefault()
+      const { data, error } = await db.auth.signInWithPassword(credentials())
+      if (error) {
+        message.textContent = '이메일 또는 비밀번호를 확인해 주세요.'
+        return
+      }
+      goNext(data.session)
+    }
+
+    document.getElementById('signup').onclick = async () => {
+      if (!form.reportValidity()) return
+      const { data, error } = await db.auth.signUp(credentials())
+      if (error) {
+        message.textContent = error.code === 'user_already_exists'
+          ? '이미 가입된 이메일입니다. 로그인해 주세요.'
+          : '가입하지 못했습니다. 입력한 내용을 확인해 주세요.'
+        return
+      }
+      goNext(data.session)
+    }
+  </script>
+</body>
+</html>

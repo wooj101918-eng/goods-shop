@@ -7,11 +7,15 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
+  <script src="common.js"></script>
 </head>
 <body>
-  <h1 id="title">결제 확인 중...</h1>
-  <p id="detail"></p>
-  <a href="index.html">상품 목록으로</a>
+  <header id="site-header"></header>
+  <main class="narrow">
+    <h1 id="title">결제 확인 중...</h1>
+    <p id="detail"></p>
+    <a class="button" href="orders.html">내 결제 내역 보기</a>
+  </main>
 
   <script>
     async function confirmPayment() {
@@ -29,7 +33,7 @@
 
       document.getElementById('title').textContent = '결제가 완료되었습니다'
       document.getElementById('detail').textContent =
-        `${data.order.product_name} · ${data.order.amount.toLocaleString()}원`
+        `${data.order.product_name} · ${won(data.order.amount)}`
     }
 
     confirmPayment()

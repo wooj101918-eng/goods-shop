@@ -5,11 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>결제 실패</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="common.js"></script>
 </head>
 <body>
-  <h1>결제가 완료되지 않았습니다</h1>
-  <p id="detail"></p>
-  <a href="index.html">상품 목록으로</a>
+  <header id="site-header"></header>
+  <main class="narrow">
+    <h1>결제가 완료되지 않았습니다</h1>
+    <p id="detail"></p>
+    <a class="button" href="index.html">상품 목록으로</a>
+  </main>
 
   <script>
     document.getElementById('detail').textContent = new URLSearchParams(location.search).get('message')

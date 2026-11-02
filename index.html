@@ -6,142 +6,49 @@
   <title>굿즈 샵</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
-  <script src="https://js.tosspayments.com/v2/standard"></script>
   <script src="config.js"></script>
+  <script src="common.js"></script>
 </head>
 <body>
-  <h1>굿즈 샵</h1>
-  <p class="notice">테스트 결제입니다. 실제로 돈이 빠져나가지 않습니다.</p>
-
-  <form id="auth-form" hidden>
-    <input id="email" type="email" placeholder="이메일" required>
-    <input id="password" type="password" placeholder="비밀번호 (6자 이상)" required>
-    <button type="submit">로그인</button>
-    <button type="button" id="signup">가입</button>
-  </form>
-
-  <div id="user-box" class="row" hidden>
-    <span id="user-email"></span>
-    <button id="logout">로그아웃</button>
-    <a id="admin-link" href="admin.html" hidden>결제 내역</a>
-  </div>
-
-  <p id="message"></p>
-  <div id="products"></div>
-
-  <div id="checkout" hidden>
-    <h2 id="checkout-title"></h2>
-    <div id="payment-method"></div>
-    <div id="agreement"></div>
-    <div class="row">
-      <button id="pay">결제하기</button>
-      <a href="index.html">취소</a>
-    </div>
-  </div>
+  <header id="site-header"></header>
+  <main>
+    <p class="notice">테스트 결제입니다. 실제로 돈이 빠져나가지 않습니다.</p>
+    <h1>상품</h1>
+    <p id="message" class="message"></p>
+    <div id="products" class="product-grid"></div>
+  </main>
 
   <script>
-    const message = document.getElementById('message')
-
-    async function showUser() {
-      const { data: { session } } = await db.auth.getSession()
-      document.getElementById('auth-form').hidden = !!session
-      document.getElementById('user-box').hidden = !session
-      if (!session) return
-
-      document.getElementById('user-email').textContent = session.user.email
-      const { data: admin } = await db.from('admins').select('user_id').maybeSingle()
-      document.getElementById('admin-link').hidden = !admin
-    }
-
     async function showProducts() {
       const { data: products, error } = await db.from('products').select().order('id')
       if (error) {
-        message.textContent = '상품을 불러오지 못했습니다.'
+        document.getElementById('message').textContent = '상품을 불러오지 못했습니다.'
         return
       }
 
       for (const product of products) {
-        const row = document.createElement('div')
-        row.className = 'row product'
+        const card = document.createElement('a')
+        card.className = 'product-card'
+        card.href = `product.html?id=${product.id}`
+
+        const photo = document.createElement('img')
+        photo.className = 'product-photo'
+        photo.src = product.image_url
+        photo.alt = product.name
+        photo.loading = 'lazy'
+
         const name = document.createElement('span')
-        name.textContent = `${product.name} · ${product.price.toLocaleString()}원`
-        const button = document.createElement('button')
-        button.textContent = '구매'
-        button.onclick = () => buy(product)
-        row.append(name, button)
-        document.getElementById('products').append(row)
+        name.className = 'product-name'
+        name.textContent = product.name
+        const price = document.createElement('span')
+        price.className = 'product-price'
+        price.textContent = won(product.price)
+
+        card.append(photo, name, price)
+        document.getElementById('products').append(card)
       }
     }
 
-    async function buy(product) {
-      message.textContent = ''
-      const { data: { session } } = await db.auth.getSession()
-      if (!session) {
-        message.textContent = '로그인 후 구매할 수 있습니다.'
-        return
-      }
-
-      const { data: order, error } = await db.rpc('create_order', { p_product_id: product.id }).single()
-      if (error) {
-        message.textContent = '주문을 만들지 못했습니다.'
-        return
-      }
-
-      document.getElementById('products').hidden = true
-      document.getElementById('checkout').hidden = false
-      document.getElementById('checkout-title').textContent =
-        `${order.product_name} · ${order.amount.toLocaleString()}원`
-
-      const widgets = TossPayments(TOSS_CLIENT_KEY).widgets({ customerKey: session.user.id })
-      await widgets.setAmount({ currency: 'KRW', value: order.amount })
-      await Promise.all([
-        widgets.renderPaymentMethods({ selector: '#payment-method', variantKey: 'DEFAULT' }),
-        widgets.renderAgreement({ selector: '#agreement', variantKey: 'AGREEMENT' }),
-      ])
-
-      document.getElementById('pay').onclick = async () => {
-        message.textContent = ''
-        try {
-          await widgets.requestPayment({
-            orderId: order.id,
-            orderName: order.product_name,
-            customerEmail: session.user.email,
-            successUrl: new URL('success.html', location.href).href,
-            failUrl: new URL('fail.html', location.href).href,
-          })
-        } catch (error) {
-          message.textContent = error.message
-        }
-      }
-    }
-
-    document.getElementById('auth-form').onsubmit = async (event) => {
-      event.preventDefault()
-      const { error } = await db.auth.signInWithPassword({
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-      })
-      message.textContent = error ? '이메일 또는 비밀번호를 확인해 주세요.' : ''
-      showUser()
-    }
-
-    document.getElementById('signup').onclick = async () => {
-      const { data, error } = await db.auth.signUp({
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-        options: { emailRedirectTo: location.href },
-      })
-      if (error) message.textContent = error.message
-      else if (!data.session) message.textContent = '메일함에서 확인 링크를 눌러 주세요.'
-      showUser()
-    }
-
-    document.getElementById('logout').onclick = async () => {
-      await db.auth.signOut()
-      showUser()
-    }
-
-    showUser()
     showProducts()
   </script>
 </body>
